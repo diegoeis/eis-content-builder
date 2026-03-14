@@ -1,0 +1,9 @@
+{
+  "name": "eis-content-builder",
+  "version": "0.2.0",
+  "description": "A personal writing assistant that learns your voice and helps you create content for any channel — blog, LinkedIn, newsletter, YouTube scripts, and more.",
+  "author": {
+    "name": "Diego Eis"
+  },
+  "keywords": ["writing", "content", "voice", "author", "blog", "newsletter", "linkedin"]
+}
