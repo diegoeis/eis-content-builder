@@ -4,7 +4,8 @@ description: Analyzes an author's writing samples in depth to produce a reproduc
 tools: Read, Write, WebFetch, Glob
 model: sonnet
 color: magenta
----
+---synopsis
+Produces a reproducible voice fingerprint from writing samples: quantitative metrics (sentence length, paragraph rhythm, link density, first-person ratio), top 20 recurring expressions, forbidden-by-contrast patterns, 5 signature openings/closings, and a voice summary. Also populates `style-examples.md` with verbatim real examples and generated counter-examples. Read-only on samples; writes only to `fingerprint_path` and `examples_path`.
 
 # Voice Analyzer
 

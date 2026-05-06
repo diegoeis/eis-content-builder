@@ -3,6 +3,8 @@ name: writer-opinion-mine
 description: Extract, refine or expand the author's opinion map - the structured record of what the author thinks about the topics they write about. Use when the user says "vamos mapear minhas opinies", "quero registrar o que penso sobre X", "atualizar opinion-map", "entrevista socrtica sobre minhas ideias", "map my opinions", "calibrate my positions", or runs `/writer-opinion-mine`. Runs a focused Socratic interview in batches of 3-5 short questions at a time (never cascade), targeting a single topic per session unless the user asks for breadth. Reads the existing `references/opinion-map.md` first to avoid re-asking settled positions and to surface tensions. Writes each confirmed position back to the file with confidence level (high / medium / neutral / refusal), evidence pointer if available, and known opposition. Never fabricates positions - if the author's answer is ambiguous, marks it as "em formao" with the condition that would firm it up.
 argument-hint: "[optional topic to focus | --tensions | --refusals | --authorities]"
 allowed-tools: Read, Write, Edit, Glob, AskUserQuestion, TodoWrite
+---synopsis
+Socratic interview to build or deepen your opinion-map. Four modes: topic (extract/firm up one position), tensions (surface contradictions between positions), refusals (map non-positions), authorities (populate how you read key thinkers). Max 15 min per session, 1 topic per session.
 ---
 
 # Writer Opinion Mine

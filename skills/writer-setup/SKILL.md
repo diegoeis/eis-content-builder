@@ -3,6 +3,8 @@ name: writer-setup
 description: Set up or upgrade the author's writer workspace - the folder that holds the author profile, voice fingerprint, style rules, content structures, sample sources, and drafts used by every other skill in this plugin. Use when the user says "set up my writing profile", "configure my writer workspace", "learn my tone and style", "update my writer setup", "meu perfil de escrita", or runs `/writer-setup`. Also trigger when another writer skill detects that the workspace config file is missing and asks the user to run setup first. Supports first-time setup (asks where to create the workspace, collects samples, delegates deep analysis to the voice-analyzer agent, generates all reference files) and update mode (detects existing workspace, offers to re-analyze samples or add new ones). Writes a plugin config file at `.claude/eis-content-builder.local.md` storing the chosen workspace path so subsequent sessions pick it up automatically.
 argument-hint: "[optional path to writing samples]"
 allowed-tools: Read, Write, Edit, Bash, Glob, AskUserQuestion, TodoWrite, WebFetch, Task
+---synopsis
+Create, upgrade, or repair the writer workspace. First-time: collects identity, samples, channels → runs voice-analyzer + opinion-extractor → writes all reference files. Update: re-analyzes samples or updates channels. Repair: recovers from missing or ephemeral workspace.
 ---
 
 # Writer Setup
@@ -71,7 +73,7 @@ Three branches:
    ---
    workspace_path: {absolute workspace path}
    initialized_at: {YYYY-MM-DD}
-   version: 0.4.0
+   version: 0.4.1
 
    channels:
      blog:
@@ -190,7 +192,7 @@ Three branches:
 
 ## Step 2B — Update existing workspace
 
-1. `Read` `{workspace}/CLAUDE.md`. Check the `Workspace version:` value vs plugin v0.3.0.
+1. `Read` `{workspace}/CLAUDE.md`. Check the `Workspace version:` value vs plugin v0.4.1.
 
 2. Ask the user what they want:
 

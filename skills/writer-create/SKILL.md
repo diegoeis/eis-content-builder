@@ -3,6 +3,8 @@ name: writer-create
 description: Write a piece of content in the author's voice, grounded in their profile, voice fingerprint, style rules, content structures and recorded opinions. Use when the user says "write an article about", "create a LinkedIn post", "draft a newsletter", "escreve um post sobre", "quero um ensaio sobre", or runs `/writer-create`. Default mode is silent - suitable for automation. Loads full workspace context, researches sources, writes to `drafts/` with complete YAML frontmatter, runs the `draft-evaluator` agent in a fix loop (max 3 iterations), then updates `references/opinion-map.md` via `opinion-extractor`. With `--interactive`, asks clarifying questions and proposes outlines. Never writes draft content into chat - always saves to `drafts/`.
 argument-hint: "<topic> [--channel newsletter|blog|linkedin|twitter|youtube|script] [--thesis \"...\"] [--length N] [--sources url1,url2] [--interactive] [--eval silent|verbose|off] [--opinion-extract on|off]"
 allowed-tools: Read, Write, Edit, Bash, Glob, AskUserQuestion, WebSearch, WebFetch, TodoWrite, Task
+---synopsis
+Write a piece in the author's voice. Silent by default (zero questions, auto eval-loop, saves to `drafts/`). Add `--interactive` for outline approval and step-by-step control. Outputs `STATUS: OK|WARN|BLOCKED` on the first line for automation pipelines.
 ---
 
 # Writer Create
@@ -257,7 +259,7 @@ In **interactive mode only**, after the log, ask via `AskUserQuestion`:
 > "Draft saved. Next step?"
 
 Options:
-- "Looks good — save to final destination" → invoke `/writer-save`, passing the draft path.
+- "Looks good — save to final destination" → tell the user: "Run `/writer-save {draft_path}` to move it to its final destination." Do **not** invoke `/writer-save` from inside this skill.
 - "Let me read the draft first" → stop; remind them where it is.
 - "Rewrite a specific part" → ask which part, apply surgical Edit.
 - "Scrap and try a different angle" → confirm, delete draft, loop back to Step 4.

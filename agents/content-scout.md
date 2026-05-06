@@ -4,7 +4,8 @@ description: Researches the web to surface content ideas calibrated to an author
 tools: Read, WebSearch, WebFetch, Glob
 model: sonnet
 color: blue
----
+---synopsis
+Web research agent for ideation. Returns a compact 1.2KB–2KB markdown brief with 5-8 content angles, each including why-now, unique angle for this author, counter-argument, 2+ verifiable anchor sources, and suggested channel. Filters aggressively against `avoid_sources` and `exclude_themes`. Never dumps raw search results. Read-only — no filesystem writes.
 
 # Content Scout
 

@@ -22,14 +22,16 @@ The plugin builds a **writer workspace** on your machine (you pick where it live
 
 | Agent | Purpose |
 |---|---|
-| `voice-analyzer` | Deep analysis of writing samples → produces `voice-fingerprint.md` with quantitative metrics, signature patterns, and real few-shot examples. Invoked by `writer-setup`. |
-| `content-scout` | Web research for ideation. Filters by your trusted sources, respects avoid lists, returns a compact brief. Invoked by `writer-ideate`. |
+| `voice-analyzer` | Deep analysis of writing samples → produces `voice-fingerprint.md` with quantitative metrics, signature patterns, and real few-shot examples. Invoked by `writer-setup` and `writer-calibrate`. |
+| `content-scout` | Web research for ideation. Filters by your trusted sources, respects avoid lists, returns a compact 1.2–2KB brief. Invoked by `writer-ideate`. |
+| `draft-evaluator` | Audits a draft against style-rules, voice-fingerprint, and opinion-map across 10 dimensions. Returns surgical old→new patches and a pass/needs_revision/block verdict. Read-only. Invoked by `writer-create`. |
+| `opinion-extractor` | Extracts explicit opinions from writing samples and proposes structured additions to `opinion-map.md`. Two modes: `bulk` (full corpus) and `single` (one draft). Read-only. Invoked by `writer-setup`, `writer-create`, and `writer-calibrate`. |
 
 ## Hooks
 
 | Hook | Trigger | Action |
 |---|---|---|
-| `style-validator` | PostToolUse on `Write` | If the write is a draft inside the workspace, validates against `style-rules.md` + `voice-fingerprint.md`. Emits a non-blocking alert. |
+| `style-validator` | PostToolUse on `Write` or `Edit` | Fast-exits immediately for non-draft writes. For drafts inside the workspace, validates against `style-rules.md` + `voice-fingerprint.md` across 7 dimensions. Emits a non-blocking alert — never modifies the file. |
 
 ---
 
@@ -162,6 +164,7 @@ Plugin UI, skills, and agent prompts are in English (for portability across Clau
 
 ## Version history
 
+- `0.4.1` — Quality improvements: synopsis blocks added to all skills and agents for progressive disclosure; style-validator hook fast-exit path made explicit (4 ordered checks before any filesystem read); `writer-ideate` agent invocation unified to `Task` tool (was `Agent`); `writer-create` interactive mode no longer invokes `/writer-save` directly (emits a suggestion instead); README updated with full agent table including `draft-evaluator` and `opinion-extractor`.
 - `0.4.0` — `voice-fingerprint.md` moved to `references/`; explicit voice hierarchy (style-rules > style-examples > fingerprint); all mutable config (channels, research_sources, ideation, language) moved from `CLAUDE.md` into `.claude/eis-content-builder.local.md`; `/writer-index` skill for Obsidian article index.
 - `0.3.0` — Workspace made portable (lives anywhere); `voice-fingerprint.md` with quantitative metrics; `voice-analyzer` + `content-scout` agents; `/writer-ideate` + `/writer-calibrate` skills; style-validator hook; commands consolidated into skills.
 - `0.2.0` — Author profile system; generic commands; Ghost integration planned.

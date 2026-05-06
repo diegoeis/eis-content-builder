@@ -3,6 +3,8 @@ name: writer-save
 description: Move a draft produced by `/writer-create` from `drafts/` to its final destination - a user-chosen path, a CMS, or a scheduled slot - applying saved save-preferences rules when they match. Use when the user says "save this draft", "move my draft to the blog folder", "publish this draft", "salvar esse draft", "agenda esse draft pro blog", "publica esse draft", or runs `/writer-save`. Supports `--remember` to record a new save-preferences rule for a type/channel combination. Merges frontmatter, updates the `updated` field, handles file conflicts, and confirms the final path or CMS URL. Does not create content - only moves and transforms existing drafts.
 argument-hint: "[draft_path] [--publish | --schedule \"YYYY-MM-DD HH:MM\" | --remember]"
 allowed-tools: Read, Write, Edit, Bash, Glob, AskUserQuestion, TodoWrite
+---synopsis
+Move a draft from `drafts/` to its final destination. Applies saved save-preferences rules automatically. Modes: save to path (default), publish to CMS (`--publish`), schedule (`--schedule`), or record a new preference rule (`--remember`).
 ---
 
 # Writer Save

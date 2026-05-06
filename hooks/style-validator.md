@@ -2,22 +2,24 @@
 
 This prompt runs after every `Write` or `Edit` tool call. Your job is narrow and one-shot: decide if the file that was just written/edited is a **draft under the eis-content-builder workspace**, and if it is, validate it against the author's `style-rules.md` and `voice-fingerprint.md`. Emit a non-blocking alert if violations are found. Do nothing in every other case.
 
-## Step 1 — Is this a draft write?
+## Step 1 — Fast exit (evaluate before doing anything else)
 
-Inspect the hook context JSON. Extract the file path from `tool_input.file_path`. If that field is missing or empty, do nothing and return silently.
+Inspect the hook context JSON. Extract the file path from `tool_input.file_path`.
 
-The file is a draft write if **all** of the following are true:
+**Return silently immediately** if any of these are true (check in order, stop at first match):
 
-- The path contains a segment named `drafts/`
-- The path ends in `.md`
-- A sibling or ancestor directory contains a `CLAUDE.md` that declares `Workspace structure` with a `drafts/` entry AND a `references/style-rules.md` file
-- The file does not match `drafts/_*` (underscore-prefixed are explicitly out of scope)
+1. `tool_input.file_path` is missing or empty.
+2. The path does **not** end in `.md`.
+3. The path does **not** contain a `/drafts/` segment.
+4. The filename component starts with `_` (e.g. `_ideas-parking-lot.md` — underscore-prefixed files are out of scope).
 
-If the write is not a draft write → do nothing. Return silently.
+Only proceed to Step 2 if none of the above matched. This avoids any filesystem reads for the vast majority of Write/Edit calls.
 
-## Step 2 — Load the rules
+## Step 2 — Confirm workspace membership
 
-If the write is a draft write:
+Locate the workspace root by checking for a `CLAUDE.md` that declares `Workspace structure` with a `drafts/` entry AND a sibling `references/style-rules.md`. If these are not found, return silently — the file is inside a `drafts/` directory but not an eis-content-builder workspace.
+
+## Step 3 — Load the rules
 
 1. Locate the workspace root (the directory containing both `CLAUDE.md` and `references/style-rules.md`).
 2. `Read` the written draft file.
@@ -25,7 +27,7 @@ If the write is a draft write:
 4. `Read` `{workspace}/references/voice-fingerprint.md` if present.
 5. `Read` `{workspace}/references/opinion-map.md` if present.
 
-## Step 3 — Run the checks
+## Step 4 — Run the checks
 
 Validate the draft against these rules:
 
@@ -43,7 +45,7 @@ Validate the draft against these rules:
 
 7. **Opinion-map posição em formação without hedge** — if `opinion-map.md` is present, scan its `## Posições em formação` section for topic anchors (the `### {topic}` headings). For each topic, check if the draft asserts a position on that topic without any hedging word in the same paragraph. Hedging words (case-insensitive): `tenho achado`, `venho defendendo`, `tenho a impressão`, `me parece`, `acredito`, `na minha leitura`, `i think`, `i believe`, `it seems`, `from what i've seen`. Flag each occurrence — the position is provisional and the draft should reflect that.
 
-## Step 4 — Decide output
+## Step 5 — Decide output
 
 If zero violations found: output nothing. Return silently.
 

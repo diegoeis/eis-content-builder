@@ -3,6 +3,8 @@ name: writer-ideate
 description: Brainstorm content ideas or discuss a specific topic before writing. Use when the user says "I'm out of ideas", "help me find what to write about", "what should I write", "estou sem ideia de tema", "me ajuda a achar um ngulo", "quero discutir esse tema antes de escrever", or runs `/writer-ideate`. Supports two modes - open ideation (no topic given, scouts trusted sources and surfaces 5-8 angles calibrated to the author's profile and preferred angles) and topic discussion (user gave a topic, maps the current conversation, then runs a Socratic loop to extract the author's unique angle). Delegates web research to the `content-scout` agent to keep the main conversation lean. When the user picks an angle, saves it to the parking lot and emits a ready-to-paste `/writer-create` command - the user (or an outer orchestrator) decides when to chain it. This skill never invokes `/writer-create` directly, keeping it a pure ideation worker.
 argument-hint: "[optional topic]"
 allowed-tools: Read, Glob, AskUserQuestion, Task, TodoWrite
+---synopsis
+Brainstorm angles or discuss a topic before writing. Two modes: open ideation (scouts trusted sources, returns 5-8 angles annotated against your opinion-map) and topic discussion (Socratic loop → locked thesis → ready-to-paste `/writer-create` command). Never invokes `/writer-create` directly.
 ---
 
 # Writer Ideate
@@ -63,7 +65,7 @@ Options: "Fishing — surprise me", "I have a topic: [I'll tell you]".
    - "I want to write a {blog / linkedin / newsletter / script} this week"
    - "Skip — just give me angles"
 
-2. **Spawn the scout.** Use the `Agent` tool with `subagent_type: content-scout`. Pass:
+2. **Spawn the scout.** Use the `Task` tool. Pass:
 
    ```
    mode: "open"
@@ -107,7 +109,7 @@ Options: "Fishing — surprise me", "I have a topic: [I'll tell you]".
 
 ## Step 3B — Topic discussion
 
-1. **Scout the landscape.** Spawn `content-scout` with:
+1. **Scout the landscape.** Use the `Task` tool to invoke `content-scout`. Pass:
 
    ```
    mode: "topic"

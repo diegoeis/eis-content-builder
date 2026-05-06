@@ -4,7 +4,8 @@ description: Extracts the author's explicit opinions from one or more pieces of 
 tools: Read, Glob
 model: sonnet
 color: yellow
----
+---synopsis
+Extracts explicit opinions from writing samples and proposes structured additions to `opinion-map.md`. Two modes: `bulk` (full corpus → promotions + alta confidence allowed) and `single` (one draft → confidence capped at média). Returns Apply-patch blocks ready for the calling skill to apply via Edit. Read-only — never writes to opinion-map.md directly.
 
 # Opinion Extractor
 

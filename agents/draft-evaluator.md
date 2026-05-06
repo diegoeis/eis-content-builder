@@ -4,7 +4,8 @@ description: Evaluates a writer-create draft against the author's style-rules.md
 tools: Read, Glob
 model: sonnet
 color: cyan
----
+---synopsis
+Audits a draft against `style-rules.md`, `voice-fingerprint.md`, `style-examples.md`, `content-structures.md`, and `opinion-map.md`. Evaluates 10 dimensions and returns a structured report with violations, severity (high/medium/low), surgical old→new patches, a score (0-100), and a verdict (pass/needs_revision/block). Read-only — never modifies the draft.
 
 # Draft Evaluator
 

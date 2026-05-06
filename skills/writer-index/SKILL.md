@@ -3,6 +3,8 @@ name: writer-index
 description: Create or update eis-article-index.js at the root of the writer workspace by querying the Obsidian writings.base file via the Obsidian CLI. Requires Obsidian CLI to be installed. Obsidian-only for now - non-Obsidian support planned for a future version. Use when the user says "atualiza o ndice", "cria o ndice de artigos", "update article index", "refresh the index", or runs `/writer-index`.
 argument-hint: "[--base <vault-relative-path-to-base-file>]"
 allowed-tools: Read, Write, Bash, AskUserQuestion
+---synopsis
+Queries the Obsidian `writings.base` database via Obsidian CLI and writes `eis-article-index.js` at the workspace root. Requires Obsidian CLI in PATH — stops immediately with install instructions if not found. Never writes an empty index.
 ---
 
 # Writer Index

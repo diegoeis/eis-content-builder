@@ -68,7 +68,7 @@ When writing, load these three files and follow this order of precedence:
 
 ## Versioning
 
-- Workspace version: `0.4.0`
+- Workspace version: `0.4.1`
 - Created: `{{CREATED_DATE}}`
 
 If this workspace's version is lower than the plugin's current version, `/writer-setup` will offer to upgrade it in place.
