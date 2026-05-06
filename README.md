@@ -1,97 +1,168 @@
 # eis-content-builder
 
-A personal writing assistant that learns your voice and produces content in it — across any channel, in any format.
+A personal writing assistant that learns your voice and produces content indistinguishable from your own — across blog, LinkedIn, newsletter, scripts, and any channel you write for.
 
-## What it does
-
-This plugin analyzes samples of your writing to build a persistent author profile: your voice, tone, style rules, preferred structures, and forbidden patterns. Once set up, it uses that profile every time you create content, so everything you write sounds like you.
+The plugin builds a **writer workspace** on your machine (you pick where it lives — inside your Obsidian vault, a dedicated folder, anywhere). That workspace holds your author profile, voice fingerprint, style rules, content structures, sample sources, and drafts. Every skill reads from it. Every skill writes back to it.
 
 ---
 
-## Commands
+## Skills
 
-### `/writer-setup`
-Build or update your author profile. Share 2–3 samples of your own writing and answer a few targeted questions. The plugin saves your profile to your workspace so it can reference it on every future session.
+| Skill | Purpose |
+|---|---|
+| `/writer-setup` | Build or upgrade the workspace. Asks where it goes, collects samples, runs deep voice analysis via the `voice-analyzer` agent, generates all reference files. |
+| `/writer-ideate` | Brainstorm topics (open mode) or discuss a specific topic (Socratic mode). Delegates web research to the `content-scout` agent. |
+| `/writer-create` | Write a piece in your voice. Loads full profile, proposes an outline, researches sources, saves to `drafts/` with complete frontmatter. Triggers the style-validator hook automatically. |
+| `/writer-save` | Move a draft from `drafts/` to its final destination. Applies saved save-preferences rules; records new ones on demand (`--remember`). |
+| `/writer-calibrate` | Refine voice rules from your corrections. Accepts a diff (plugin draft vs your rewrite) or free-text description. Updates `style-rules.md` and `style-examples.md`. Flags position shifts for `/writer-opinion-mine`. |
+| `/writer-opinion-mine` | Map the author's opinions on the topics they write. Socratic interview in batches of 3–5 questions. Writes to `references/opinion-map.md` — loaded by `writer-ideate` and `writer-create` so the plugin knows where the author stands, where they're still calibrating, and what they refuse to opine on. |
+| `/writer-index` | Create or update `eis-article-index.js` at the root of the workspace by querying the Obsidian `writings.base` file via the Obsidian CLI. Obsidian-only. |
 
-Run this once before your first `/write`. Re-run any time you want to refine your profile with new samples or correct something.
+## Agents
 
-### `writer-create [topic] [--channel channel-name]`
-Write content in your voice. The plugin loads your profile, asks what you need, proposes a structure for your approval, then writes the full piece.
+| Agent | Purpose |
+|---|---|
+| `voice-analyzer` | Deep analysis of writing samples → produces `voice-fingerprint.md` with quantitative metrics, signature patterns, and real few-shot examples. Invoked by `writer-setup`. |
+| `content-scout` | Web research for ideation. Filters by your trusted sources, respects avoid lists, returns a compact brief. Invoked by `writer-ideate`. |
 
-Examples:
-- `writer-create why most product roadmaps fail`
-- `writer-create --channel linkedin`
-- `writer-create quarterly planning mistakes --channel newsletter`
+## Hooks
 
-Supported channels: `blog`, `linkedin`, `newsletter`, `twitter`, `youtube` (and any custom channel you define in your profile).
-
-### `/save [path] [--publish] [--schedule "YYYY-MM-DD HH:MM"]`
-Save the content you just wrote to your workspace or prepare it for your CMS.
-
-- Default: saves as `.md` with complete frontmatter to your workspace
-- `--publish`: publishes directly to your connected CMS (Ghost integration coming soon)
-- `--schedule`: saves with a scheduled publication date in frontmatter
+| Hook | Trigger | Action |
+|---|---|---|
+| `style-validator` | PostToolUse on `Write` | If the write is a draft inside the workspace, validates against `style-rules.md` + `voice-fingerprint.md`. Emits a non-blocking alert. |
 
 ---
 
-## How the profile works
+> **Note on invocation:** skills in this plugin are user-invocable — they show up as `/eis-content-builder:writer-setup`, `/eis-content-builder:writer-create`, etc. Throughout this README and the skill prompts, the shorthand `/writer-setup` is used for readability. Natural language works too ("set up my writing profile", "write a blog post about X") — the skills have trigger descriptions that catch those.
 
-After running `/writer-setup`, the plugin creates a folder in your workspace:
+## Workflow
 
 ```
-{your-workspace}/
-└── eis-personal-writer-clone/
-    └── references/
-        ├── author-profile.md       ← Who you are, expertise, themes, audience
-        ├── style-rules.md          ← Voice, forbidden phrases, formatting rules
-        ├── content-structures.md   ← Format guides per channel
-        └── style-examples.md       ← Annotated good/bad examples from your writing
+/writer-setup          (once — picks workspace path, analyzes samples)
+        ↓
+/writer-ideate         (optional — when you don't have a topic)
+        ↓
+/writer-create topic   (writes to drafts/, validator runs automatically)
+        ↓
+/writer-save           (moves draft to its final location)
+        ↓
+/writer-calibrate      (when output wasn't quite your voice — learn from your fix)
 ```
 
-These are plain Markdown files. You can open and edit them directly. Claude loads them at the start of every `/write` session.
+---
+
+## Workspace structure
+
+After `/writer-setup`, the path you chose contains:
+
+```
+<your-workspace>/
+├── CLAUDE.md                     ← operational rules + voice hierarchy + protocols
+├── references/
+│   ├── voice-fingerprint.md      ← quantitative voice analysis (generated by voice-analyzer)
+│   ├── author-profile.md
+│   ├── style-rules.md            ← highest authority for voice (wins over fingerprint)
+│   ├── style-examples.md         ← concrete examples of what good looks like
+│   ├── content-structures.md
+│   ├── save-preferences.md
+│   └── opinion-map.md
+├── sample-sources/               ← original samples that trained the profile
+└── drafts/                       ← pieces written by the plugin
+```
+
+The workspace has its own `CLAUDE.md` — any Claude Code / Cowork session opening that folder picks it up automatically. That means the invariants (never fabricate data, voice hierarchy, etc.) apply even outside this plugin's skills.
+
+### Voice reference hierarchy
+
+When writing, the plugin loads three files in this order of precedence:
+
+1. `references/style-rules.md` — declared intent, always wins in a conflict
+2. `references/style-examples.md` — concrete examples of rhythm and structure
+3. `references/voice-fingerprint.md` — measured habits from real samples, subordinate to rules
+
+---
+
+## Plugin config
+
+On first setup, the plugin writes `.claude/eis-content-builder.local.md` in your current project. This file is the single source of truth for all mutable settings:
+
+```yaml
+---
+workspace_path: /absolute/path/to/your/workspace
+initialized_at: YYYY-MM-DD
+version: 0.4.0
+
+channels:
+  blog:
+    url: "https://yoursite.com"
+    cms: ghost              # ghost | wordpress | obsidian | custom | none
+    publish_via: manual     # api | manual
+  linkedin:
+    profile_url: "https://linkedin.com/in/you"
+    posting_tool: manual
+  newsletter:
+    platform: beehiiv       # substack | buttondown | beehiiv | other | none
+    url: "https://yoursite.com"
+
+research_sources:
+  trusted_blogs: []         # e.g. https://lennysnewsletter.com
+  rss_feeds: []             # { url, tag }
+  people_to_watch: []       # { name, platform, url }
+  avoid_sources: []         # domains you refuse to cite
+
+ideation:
+  exclude_themes: []        # topics you refuse to write about
+  preferred_angles: []      # e.g. counterintuitive, data-driven, personal-experience
+  default_channel: blog
+
+language:
+  default: pt-BR
+  technical_terms_in: en
+---
+```
+
+This file is gitignored by the plugin. Delete it to force re-setup. Edit it directly to update channels or research preferences — no need to re-run `/writer-setup`.
+
+---
+
+## External dependencies
+
+Most skills require no external tools — only Claude-native tools and filesystem access.
+
+| Skill | External dependency |
+|---|---|
+| `/writer-index` | **Obsidian CLI** — must be on `$PATH`. Ships with Obsidian Desktop. The skill fails gracefully with a clear error if the CLI is not found. |
 
 ---
 
 ## Getting started
 
-1. Install the plugin
-2. Select your workspace folder in Claude Cowork
-3. Run `/writer-setup` and share 2–3 samples of your writing
-4. Run `writer-create` to create your first piece
+1. Install the plugin.
+2. Open a folder in Claude Code or Cowork (recommended: your Obsidian vault, or any folder where you want to manage your writing).
+3. Run `/writer-setup`.
+   - Pick where the workspace lives (anywhere — the plugin asks).
+   - Share 2–3 of your writing samples (file paths, pasted text, or URLs).
+   - Answer the short identity + channels + language round.
+   - Wait for the `voice-analyzer` agent to finish.
+4. Run `/writer-ideate` to brainstorm or `/writer-create <topic>` to start writing.
 
 ---
 
-## Setup requirements
+## Why drafts live in files, not in chat
 
-No environment variables needed for local use.
-
-**Ghost CMS integration** (coming in a future version) will require:
-- `GHOST_API_URL` — your Ghost blog URL
-- `GHOST_ADMIN_API_KEY` — your Ghost Admin API key
+Every piece `/writer-create` produces is written to `drafts/`. The plugin shows you the path and a 2-sentence preview — never the full body. This is deliberate: dumping long content into chat is expensive in tokens, and you'd rather read the draft in your editor anyway. When you want edits, point to the draft; the plugin patches it with surgical `Edit` calls.
 
 ---
 
-## File structure
+## Language
 
-```
-eis-content-builder/
-├── .claude-plugin/
-│   └── plugin.json
-├── commands/
-│   ├── writer-setup.md        ← Build or update your author profile
-│   ├── writer-create.md        ← Write content in your voice
-│   └── writer-save.md         ← Save or publish your content
-├── skills/
-│   └── eis-personal-writer-clone/
-│       ├── SKILL.md
-│       └── references/
-│           ├── profile-templates.md   ← Blank templates used during setup
-└── README.md
-```
+Plugin UI, skills, and agent prompts are in English (for portability across Claude Code / Cowork). The content the plugin writes follows the language you're interacting in, unless you explicitly ask for another. Your reference files are authored in your language — whichever you configured during setup.
 
 ---
 
 ## Version history
 
-- `0.2.0` — Plugin made generic; author profile system; commands added; Ghost integration planned
-- `0.1.0` — Initial version (personal configuration)
+- `0.4.0` — `voice-fingerprint.md` moved to `references/`; explicit voice hierarchy (style-rules > style-examples > fingerprint); all mutable config (channels, research_sources, ideation, language) moved from `CLAUDE.md` into `.claude/eis-content-builder.local.md`; `/writer-index` skill for Obsidian article index.
+- `0.3.0` — Workspace made portable (lives anywhere); `voice-fingerprint.md` with quantitative metrics; `voice-analyzer` + `content-scout` agents; `/writer-ideate` + `/writer-calibrate` skills; style-validator hook; commands consolidated into skills.
+- `0.2.0` — Author profile system; generic commands; Ghost integration planned.
+- `0.1.0` — Initial personal version.

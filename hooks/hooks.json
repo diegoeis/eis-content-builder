@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "prompt",
+            "promptFile": "${CLAUDE_PLUGIN_ROOT}/hooks/style-validator.md"
+          }
+        ]
+      }
+    ]
+  }
+}
