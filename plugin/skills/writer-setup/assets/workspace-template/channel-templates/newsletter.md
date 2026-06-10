@@ -25,12 +25,12 @@ edition length and rhythm.
 
 ```yaml
 title: <title>
-subject_line: <email subject>
 slug: <slug>
 date: <YYYY-MM-DD>
-issue_number: <int>
+tags: []
 status: draft
-type: newsletter
+excerpt: <one-sentence max 180 chars summary>
+type: article
 channel: newsletter
 ```
 

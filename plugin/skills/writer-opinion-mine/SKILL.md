@@ -1,6 +1,6 @@
 ---
 name: writer-opinion-mine
-description: Extract, refine or expand the author's opinion map - the structured record of what the author thinks about the topics they write about. Use when the user says "vamos mapear minhas opinies", "quero registrar o que penso sobre X", "atualizar opinion-map", "entrevista socrtica sobre minhas ideias", "map my opinions", "calibrate my positions", or runs `/writer-opinion-mine`. Runs a focused Socratic interview in batches of 3-5 short questions at a time (never cascade), targeting a single topic per session unless the user asks for breadth. Reads the existing `references/opinion-map.md` first to avoid re-asking settled positions and to surface tensions. Writes each confirmed position back to the file with confidence level (high / medium / neutral / refusal), evidence pointer if available, and known opposition. Never fabricates positions - if the author's answer is ambiguous, marks it as "em formao" with the condition that would firm it up.
+description: Conversational worker skill that interviews the author to build or refine their opinion map - the structured record of positions, refusals, tensions and authorities they bring to topics they write about. Use when the user says "vamos mapear minhas opiniões", "quero registrar o que penso sobre X", "atualizar opinion-map", "entrevista socrática sobre minhas ideias", "map my opinions", "calibrate my positions", "what do I think about Y", "registra minha posição sobre Z", or runs `/writer-opinion-mine`. One topic per session, capped at ~15 minutes, never fabricates a position when the author hedges. This skill is the canonical owner of opinion-map updates - other skills that detect a position shift should hand off to this one rather than write opinion-map themselves.
 argument-hint: "[optional topic to focus | --tensions | --refusals | --authorities]"
 allowed-tools: Read, Write, Edit, Glob, AskUserQuestion, TodoWrite
 ---
@@ -26,25 +26,7 @@ Inherit from `{workspace}/CLAUDE.md`. Critical for this skill:
 
 ## Step 1 — Load workspace
 
-1. **Locate the plugin config.** Probe these paths in order, stopping at the first hit: (1) `${EIS_CONTENT_BUILDER_CONFIG}` if set, (2) `${cwd}/.claude/eis-content-builder.local.md`, (3) walk-up from `${cwd}` checking each parent's `.claude/eis-content-builder.local.md`, (4) `${HOME}/.claude/eis-content-builder.local.md`. Use a single `Bash`:
-
-   ```bash
-   config=""
-   if [ -n "$EIS_CONTENT_BUILDER_CONFIG" ] && [ -f "$EIS_CONTENT_BUILDER_CONFIG" ]; then
-     config="$EIS_CONTENT_BUILDER_CONFIG"
-   fi
-   if [ -z "$config" ]; then
-     dir="$PWD"
-     while [ "$dir" != "/" ]; do
-       [ -f "$dir/.claude/eis-content-builder.local.md" ] && config="$dir/.claude/eis-content-builder.local.md" && break
-       dir="$(dirname "$dir")"
-     done
-   fi
-   [ -z "$config" ] && [ -f "$HOME/.claude/eis-content-builder.local.md" ] && config="$HOME/.claude/eis-content-builder.local.md"
-   echo "$config"
-   ```
-
-   Empty result → "Run `/writer-setup` first." Stop. Otherwise `Read "$config"`.
+1. **Locate the plugin config.** Use the canonical probe in `../writer-setup/references/load-config.md` (pointer → env var → walk-up, all targeting `.local.json`). Empty result → `"Run /writer-setup first."` Stop. Otherwise `Read "$CONFIG_PATH"` and parse as JSON.
 2. Extract `workspace_path`.
 3. `Read` in parallel (one message, multiple Read calls):
    - `{workspace}/CLAUDE.md`

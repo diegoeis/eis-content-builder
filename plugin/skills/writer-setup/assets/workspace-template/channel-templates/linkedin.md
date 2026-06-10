@@ -22,13 +22,14 @@ on feed display — the hook must land in the first 1–2 lines.
 ## Frontmatter (internal, not published)
 
 ```yaml
-title: <internal title for the draft>
+title: <title>
 slug: <slug>
 date: <YYYY-MM-DD>
+tags: []
 status: draft
-type: linkedin-post
+excerpt: <one-sentence max 180 chars summary>
+type: article
 channel: linkedin
-hashtags: []
 ```
 
 ## Anti-patterns

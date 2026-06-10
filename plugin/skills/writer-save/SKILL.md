@@ -24,25 +24,7 @@ Inherit from `{workspace}/CLAUDE.md`. Key ones:
 
 ## Step 1 — Load workspace
 
-1. **Locate the plugin config.** Probe these paths in order, stopping at the first hit: (1) `${EIS_CONTENT_BUILDER_CONFIG}` if set, (2) `${cwd}/.claude/eis-content-builder.local.md`, (3) walk-up from `${cwd}` checking each parent's `.claude/eis-content-builder.local.md`, (4) `${HOME}/.claude/eis-content-builder.local.md`. Use a single `Bash`:
-
-   ```bash
-   config=""
-   if [ -n "$EIS_CONTENT_BUILDER_CONFIG" ] && [ -f "$EIS_CONTENT_BUILDER_CONFIG" ]; then
-     config="$EIS_CONTENT_BUILDER_CONFIG"
-   fi
-   if [ -z "$config" ]; then
-     dir="$PWD"
-     while [ "$dir" != "/" ]; do
-       [ -f "$dir/.claude/eis-content-builder.local.md" ] && config="$dir/.claude/eis-content-builder.local.md" && break
-       dir="$(dirname "$dir")"
-     done
-   fi
-   [ -z "$config" ] && [ -f "$HOME/.claude/eis-content-builder.local.md" ] && config="$HOME/.claude/eis-content-builder.local.md"
-   echo "$config"
-   ```
-
-   Empty result → "Run `/writer-setup` first." Stop. Otherwise `Read "$config"`.
+1. **Locate the plugin config.** Use the canonical probe in `../writer-setup/references/load-config.md` (pointer → env var → walk-up, all targeting `.local.json`). Empty result → `"Run /writer-setup first."` Stop. Otherwise `Read "$CONFIG_PATH"` and parse as JSON.
 2. Extract `workspace_path`.
 3. `Read` `{workspace}/references/save-preferences.md`. If missing, treat as empty rules list.
 
@@ -92,7 +74,7 @@ Use `AskUserQuestion`:
 Options based on mode:
 
 - Mode F: "Save as Markdown in my workspace" (default), "Save to a specific folder (I'll give the path)", "Skip — just leave it in drafts/"
-- Mode P: always "Publish to {CMS from .local.md channels}" — if no CMS integration configured for this channel, fall back to Mode F with a warning.
+- Mode P: always "Publish to {CMS from .local.json channels}" — if no CMS integration configured for this channel, fall back to Mode F with a warning.
 - Mode S: always "Schedule for later" (asks for datetime next).
 
 If the user picks "specific folder", ask for the path + filename pattern preference:
@@ -129,7 +111,7 @@ After saving, ask: "Want me to remember this for future {type}/{channel} pieces?
 
 ## Step 7 — CMS publish / schedule
 
-**If Mode P and CMS integration exists** (check `.claude/eis-content-builder.local.md` `channels.{channel}` for a `cms` value and `publish_via: api`):
+**If Mode P and CMS integration exists** (check `.claude/eis-content-builder.local.json` `channels.{channel}` for a `cms` value and `publish_via: api`):
 
 1. Confirm: "Ready to publish `{title}` to {CMS}? This will be visible immediately once confirmed."
 2. Wait for explicit yes.

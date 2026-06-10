@@ -1,6 +1,6 @@
 ---
 name: writer-setup
-description: Create the writer workspace from scratch and populate the reference files the rest of the plugin reads (author profile, voice fingerprint, style rules, channel templates, opinion map, optional article index). Use when the user says "set up my writing profile", "configure my writer workspace", "learn my tone and style", "meu perfil de escrita", "configurar workspace", or runs `/writer-setup`. Also trigger when another writer skill detects that the local config (`.claude/eis-content-builder.local.json`) is missing and points the user back to setup. This skill is for FIRST-TIME setup. For pinpoint voice corrections on a single piece use `/writer-calibrate`; to map or refine the author's positions on topics use `/writer-opinion-mine`. v0.6.0 first-time only.
+description: Supervisor skill that creates the writer workspace from scratch and orchestrates the voice-analyzer, profile-inferencer, opinion-extractor and archive-detector sub-agents to populate the reference files the rest of the plugin reads. Use when the user says "set up my writing profile", "configure my writer workspace", "learn my tone and style", "start fresh", "onboard me", "meu perfil de escrita", "configurar workspace", "começar do zero", or runs `/writer-setup`. Also trigger when another writer skill reports the local config is missing. First-time setup only in this version - for surgical voice corrections use `/writer-calibrate`, for mapping the author's positions on topics use `/writer-opinion-mine`.
 argument-hint: "[optional: path-or-link hints]"
 allowed-tools: Read, Write, Edit, Bash, Glob, AskUserQuestion, TodoWrite, WebFetch, Task, Skill
 ---
@@ -421,31 +421,7 @@ use of each channel (see "Lazy channel materialization" below).
 
 Both writes can happen in a single message (parallel, no dependencies).
 
-**Lazy channel materialization — design contract:**
-
-`/writer-create` is responsible for materializing the channel-template
-on first use, inline (no skill delegation). Procedure when
-`/writer-create` is invoked with `--channel <name>`:
-
-1. Check if `{workspace}/channel-templates/<name>.md` exists. If yes,
-   use it as-is.
-2. If no, read the source template at
-   `${CLAUDE_PLUGIN_ROOT}/skills/writer-setup/assets/workspace-template/channel-templates/<name>.md`.
-3. Apply any `template_customizations` recorded in
-   `.local.json` under `channels.<name>.template_customizations` (those
-   were proposed by `profile-inferencer` during setup; see Step 2.6).
-4. Write the customized template to
-   `{workspace}/channel-templates/<name>.md`.
-5. Proceed with the draft.
-
-If the channel has no built-in template (`youtube`, `medium`, or any
-other declared without an asset file), `/writer-create` falls back to a
-generic structure inferred at write time and writes a starter template
-to `{workspace}/channel-templates/<name>.md` so subsequent runs have
-something concrete to edit.
-
-This skill does NOT pre-materialize any channel template — users only
-pay materialization cost for channels they actually write for.
+**Lazy channel materialization — design contract:** see `references/lazy-channel-materialization.md`. Short version: this skill never pre-materializes channel templates. `/writer-create` does it on first use of each channel, applying `template_customizations` recorded in `.local.json` (filled by `profile-inferencer` in Step 2.6 below).
 
 ### 2.2 — Dispatch agents in parallel
 
@@ -787,111 +763,17 @@ missing. Do not write the config or pointer — the workspace stays in a
 ### 4.2 — Write the canonical config
 
 Write JSON to `{workspace_path}/.claude/eis-content-builder.local.json`.
-Schema (every field present, nulls allowed):
-
-```json
-{
-  "workspace_path": "{workspace_path}",
-  "initialized_at": "YYYY-MM-DD",
-  "version": "0.6.0",
-
-  "author": {
-    "first_name": "{first_name_slug}",
-    "full_name": "{full name or null}"
-  },
-
-  "language": {
-    "default": "pt-BR",
-    "technical_terms_in": "en"
-  },
-
-  "channels": {
-    "blog": {
-      "url": "https://...",
-      "cms": "ghost|wordpress|obsidian|custom|none|null",
-      "publish_via": "manual|api",
-      "has_template": true,
-      "materialized": false,
-      "template_customizations": {
-        "target_length_words": [800, 1300],
-        "formatting_notes_addition": null,
-        "anti_pattern_additions": [],
-        "rationale": "Median word count across blog samples: 1050"
-      }
-    },
-    "newsletter": {
-      "shares_url_with": "blog",
-      "platform": "ghost",
-      "has_template": true,
-      "materialized": false,
-      "template_customizations": null
-    },
-    "linkedin": {
-      "profile_url": "https://...",
-      "posting_tool": "manual",
-      "has_template": true,
-      "materialized": false,
-      "template_customizations": null
-    },
-    "twitter": {
-      "active": true,
-      "has_template": true,
-      "materialized": false,
-      "template_customizations": null
-    },
-    "youtube": {
-      "active": true,
-      "has_template": false,
-      "materialized": false,
-      "template_customizations": null
-    },
-    "medium": {
-      "active": true,
-      "has_template": false,
-      "materialized": false,
-      "template_customizations": null
-    }
-  },
-
-  "research_sources": {
-    "trusted_blogs": [],
-    "rss_feeds": [],
-    "people_to_watch": [],
-    "avoid_sources": []
-  },
-
-  "article_archive": {
-    "enabled": true,
-    "path": "/abs/path",
-    "file_pattern": "**/*.md",
-    "toolchain": "obsidian|generic",
-    "schema": {
-      "title_property": "title",
-      "tags_property": "tags",
-      "status_property": "status",
-      "published_values": ["published"],
-      "date_property": "date",
-      "url_property": "permalink",
-      "excerpt_property": "excerpt"
-    },
-    "index_file": {
-      "path": null,
-      "format": null
-    }
-  },
-
-  "save_preferences": [],
-
-  "ideation": {
-    "exclude_themes": [],
-    "preferred_angles": [],
-    "default_channel": "blog"
-  }
-}
-```
+The full schema (every field present, nulls allowed) lives in
+**`references/config-schema.md`**. Load it when writing. Every field
+described there must be present in the file you write — even empty
+arrays and `null` values, so other skills can rely on field existence
+without defensive checks.
 
 If archive was declined or failed: set `article_archive.enabled: false`
-and leave all archive fields as defaults except `enabled`.
+and leave all archive fields at their defaults except `enabled`.
+
+When bumping the plugin version, update the hardcoded `version` value
+both here and in `plugin.json`.
 
 ### 4.3 — Write the pointer
 

@@ -1,6 +1,6 @@
 ---
 name: writer-ideate
-description: Brainstorm content ideas or discuss a specific topic before writing. Use when the user says "I'm out of ideas", "help me find what to write about", "what should I write", "estou sem ideia de tema", "me ajuda a achar um ngulo", "quero discutir esse tema antes de escrever", or runs `/writer-ideate`. Supports two modes - open ideation (no topic given, scouts trusted sources and surfaces 5-8 angles calibrated to the author's profile and preferred angles) and topic discussion (user gave a topic, maps the current conversation, then runs a Socratic loop to extract the author's unique angle). Delegates web research to the `content-scout` agent to keep the main conversation lean. When the user picks an angle, saves it to the parking lot and emits a ready-to-paste `/writer-create` command - the user (or an outer orchestrator) decides when to chain it. This skill never invokes `/writer-create` directly, keeping it a pure ideation worker.
+description: Supervisor skill for ideation that orchestrates the content-scout sub-agent and hands off an angle - never writes the piece itself. Use when the user says "I'm out of ideas", "help me find what to write about", "what should I write", "estou sem ideia de tema", "me ajuda a achar um ângulo", "quero discutir esse tema antes de escrever", "let's brainstorm", "what angles for X", "tô travado, me dá ideias", or runs `/writer-ideate`. Two modes - open ideation (no topic, scouts trusted sources for 5-8 angles annotated against the opinion-map) and topic discussion (Socratic loop on a given topic to extract the author's unique angle). When the user picks an angle, saves it to the parking lot and emits a ready-to-paste `/writer-create` command. Never invokes `/writer-create` directly - the user or an outer orchestrator decides when to chain it.
 argument-hint: "[optional topic]"
 allowed-tools: Read, Glob, AskUserQuestion, Task, TodoWrite
 ---
@@ -24,25 +24,7 @@ Inherit everything from `{workspace}/CLAUDE.md`. Key ones for this skill:
 
 ## Step 1 — Load workspace config
 
-1. **Locate the plugin config.** Probe these paths in order, stopping at the first hit: (1) `${EIS_CONTENT_BUILDER_CONFIG}` if set, (2) `${cwd}/.claude/eis-content-builder.local.md`, (3) walk-up from `${cwd}` checking each parent's `.claude/eis-content-builder.local.md`, (4) `${HOME}/.claude/eis-content-builder.local.md`. Use a single `Bash`:
-
-   ```bash
-   config=""
-   if [ -n "$EIS_CONTENT_BUILDER_CONFIG" ] && [ -f "$EIS_CONTENT_BUILDER_CONFIG" ]; then
-     config="$EIS_CONTENT_BUILDER_CONFIG"
-   fi
-   if [ -z "$config" ]; then
-     dir="$PWD"
-     while [ "$dir" != "/" ]; do
-       [ -f "$dir/.claude/eis-content-builder.local.md" ] && config="$dir/.claude/eis-content-builder.local.md" && break
-       dir="$(dirname "$dir")"
-     done
-   fi
-   [ -z "$config" ] && [ -f "$HOME/.claude/eis-content-builder.local.md" ] && config="$HOME/.claude/eis-content-builder.local.md"
-   echo "$config"
-   ```
-
-   Empty result → tell the user "Run `/writer-setup` first — I need your profile and research sources." Stop. Otherwise `Read "$config"`.
+1. **Locate the plugin config.** Use the canonical probe in `../writer-setup/references/load-config.md` (pointer → env var → walk-up, all targeting `.local.json`). Empty result → `"Run /writer-setup first — I need your profile and research sources."` Stop. Otherwise `Read "$CONFIG_PATH"` and parse as JSON.
 2. Extract `workspace_path`, `research_sources`, `ideation`, and `channels` from the config.
 3. `Read` in parallel (one message, multiple Read calls):
    - `{workspace}/CLAUDE.md`
@@ -91,7 +73,7 @@ Options: "Fishing — surprise me", "I have a topic: [I'll tell you]".
    ```
    mode: "open"
    profile_path: {workspace}/references/author-profile.md
-   local_config_path: .claude/eis-content-builder.local.md
+   local_config_path: .claude/eis-content-builder.local.json
    max_angles: 6
    ```
 
@@ -136,7 +118,7 @@ Options: "Fishing — surprise me", "I have a topic: [I'll tell you]".
    mode: "topic"
    topic: "{user's topic}"
    profile_path: {workspace}/references/author-profile.md
-   local_config_path: .claude/eis-content-builder.local.md
+   local_config_path: .claude/eis-content-builder.local.json
    max_angles: 5
    ```
 
@@ -202,5 +184,5 @@ Only use for topic mode, Step 3B items 2 and 3 (Socratic loop + thesis convergen
 ## Failure handling
 
 - Scout returns empty / no angles: tell the user, offer to switch modes or loosen filters.
-- Missing `research_sources` in `.local.md`: scout already warns; relay that warning.
+- Missing `research_sources` in `.local.json`: scout already warns; relay that warning.
 - User rejects every angle in topic mode: stop gracefully, suggest `/writer-setup` to refine themes/preferred_angles.

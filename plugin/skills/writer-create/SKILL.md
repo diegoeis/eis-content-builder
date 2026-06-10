@@ -1,6 +1,6 @@
 ---
 name: writer-create
-description: Write a piece of content in the author's voice, grounded in their profile, voice fingerprint, style rules, channel template and recorded opinions. Use when the user says "write an article about", "create a LinkedIn post", "draft a newsletter", "escreve um post sobre", "quero um ensaio sobre", or runs `/writer-create`. Default mode is silent - suitable for automation. Discovers the workspace via local walk-up or `$HOME/.claude/eis-content-builder.pointer.json`, lazily materializes the channel template on first use, loads Tier 1-3 context only (never reads `sample-sources/` at runtime), researches sources (browser-tool first, WebFetch fallback), writes to `drafts/` with complete YAML frontmatter, runs a mandatory inline self-audit against high-risk hard rules, then OPTIONALLY runs the `draft-evaluator` agent (only when `--eval on`), then updates `references/opinion-map.md` via `opinion-extractor`. With `--interactive`, asks clarifying questions and proposes outlines. Never writes draft content into chat - always saves to `drafts/`.
+description: Supervisor skill that writes a piece of content in the author's voice and orchestrates the draft-evaluator and opinion-extractor sub-agents. Use when the user says "write an article about", "create a LinkedIn post", "draft a newsletter", "escreve um post sobre", "quero um ensaio sobre", "write me a piece on X", "rascunha um texto", or runs `/writer-create`. Default mode is silent and safe for automation - zero questions, mandatory inline self-audit, opt-in stronger eval via `--eval on`. With `--interactive`, asks clarifying questions and proposes outlines for approval. Researches sources (browser-tool first, WebFetch fallback), saves to `drafts/` with complete YAML frontmatter, and emits a `STATUS: OK|WARN|BLOCKED` line on the first output line so pipelines can branch. Never writes draft content into chat - always saves to `drafts/`.
 argument-hint: "<topic> [--channel newsletter|blog|linkedin|twitter|youtube|script] [--thesis \"...\"] [--length N] [--sources url1,url2] [--workspace /abs/path] [--interactive] [--eval off|on|verbose] [--opinion-extract on|off]"
 allowed-tools: Read, Write, Edit, Bash, Glob, AskUserQuestion, WebSearch, WebFetch, TodoWrite, Task
 ---
@@ -41,6 +41,22 @@ it re-reads the full `style-rules.md`, `voice-fingerprint.md`,
 sub-agent context and runs all 10 dimensions exhaustively. Use
 `--eval on` when you want that second opinion (high-stakes pieces,
 calibration verification, suspicion the self-audit drifted).
+
+## Authorial stance (non-negotiable)
+
+**Every piece produced by this skill is an authorial article, never a reference piece, summary, explainer, or paraphrase of someone else's work.**
+
+The author's voice, position, and argument are the product. Sources — articles, posts, papers, transcripts, books, links the user passes via `--sources`, candidates surfaced by research, even snippets from the author's own archive — are **raw material** for the author to think with, not the subject to be explained.
+
+What this means in practice:
+
+- The piece is built around the **author's thesis**, not around "here's what X said and here's what Y said." Other people's ideas appear as evidence, contrast, or counterpoint — never as the central spine.
+- Do **not** structure the draft as a summary of a source ("In this article, [author] argues…"), a recap ("The piece walks through three ideas…"), a reaction post ("I read X and here are my thoughts on each point…"), or a tutorial about the source material ("Here's what [framework/book/talk] teaches…").
+- Quote sparingly and only when the exact wording matters. Default to **synthesis with attribution** — take the idea, run it through the author's lens, link the source. The reader leaves with the author's argument, not a digest of someone else's.
+- Even when **no external sources are provided** (just a topic), the same rule holds: write an authorial take, not a generic explainer or "what is X" piece. The author has a position; surface it.
+- If the only thing you can write on a topic is a summary or explainer of an external piece (because the author has no distinctive angle yet), this is a signal that the topic belongs to `## Forming positions` or `## Neutral zones` in `opinion-map.md` — flag it in the final log and proceed with an analytical/descriptive framing per Step 5, not as a faux-authorial piece.
+
+This rule overrides any pull toward "balanced coverage," "comprehensive explanation," or "doing justice to the source." The skill exists to produce the author's writing, not to produce study notes about other people's writing.
 
 ## Invariant rules
 
@@ -261,21 +277,35 @@ Batch in parallel where independent (browser vs WebFetch on disjoint URLs).
 
 ## Step 9 — Write the draft
 
-1. **Compute the draft path.** Filename preserves sentence case of the working title exactly as it will appear as H1 — do not slugify, do not lowercase, do not replace spaces with hyphens. Sanitize only filesystem-illegal chars (`/`, `:`, `?`, `*`, `<`, `>`, `|`, `\`, leading/trailing whitespace, trailing periods). Keep spaces, accents, capitalization.
+1. **Compute the draft path.** Filename preserves the working title verbatim — same capitalization, spaces, and accents as the H1. Do not slugify, do not lowercase, do not replace spaces with hyphens, **do not prepend the date or any other prefix**. Sanitize only filesystem-illegal chars (`/`, `:`, `?`, `*`, `<`, `>`, `|`, `\`, leading/trailing whitespace, trailing periods).
 
-   Path: `{workspace}/drafts/{YYYY-MM-DD} - {Title in sentence case}.md`.
+   Path: `{workspace}/drafts/{Title}.md`.
 
-   Example: title `Como criar cultura e estruturar uma área de produtos` → file `2026-04-18 - Como criar cultura e estruturar uma área de produtos.md`.
+   Example: title `Entender antes de executar` → file `Entender antes de executar.md`. Title `Como criar cultura e estruturar uma área de produtos` → file `Como criar cultura e estruturar uma área de produtos.md`.
 
-   If the file already exists: silent mode appends `-v2`, `-v3`, etc until a free name is found; interactive mode asks.
+   The title itself must also not carry the date inside it — never bake `{YYYY-MM-DD}` into the H1 or the filename. Dates live in the frontmatter (`created`, `updated`, `date`), not in the file identity.
 
-2. **Assemble frontmatter from the channel template.** Read the `## Frontmatter` block of `{workspace}/channel-templates/{channel}.md`. That YAML block is the source of truth — use those fields exactly, substituting placeholders (`<title>`, `<slug>`, `<YYYY-MM-DD>`, etc.) with actual values. Always include `created`, `updated`, `published: false`, `status: draft`, and `excerpt` (≤ 200 chars) even if the template omits them — those are mandatory for every draft. Add `tags` derived from topic keywords.
+   If the file already exists: silent mode appends ` v2`, ` v3`, etc (with a space, preserving the title style) until a free name is found; interactive mode asks.
 
-   Example shape (the exact field set depends on the channel template):
+2. **Assemble frontmatter from the channel template.** Read the `## Frontmatter` block of `{workspace}/channel-templates/{channel}.md`. **That YAML block is the source of truth for which keys exist.** Use exactly the fields declared there, substituting placeholders (`<title>`, `<slug>`, `<YYYY-MM-DD>`, etc.) with actual values.
+
+   **Do not invent new properties.** Never add YAML keys that are not in the template's `## Frontmatter` block. No `author`, `category`, `seo_title`, `og_image`, `summary`, `keywords`, `series`, `featured`, or any other field unless the template literally lists it. If a field feels missing, surface that in the warnings — do not silently add it. The only exception is the mandatory baseline below (always present, even when the template omits them).
+
+   **Mandatory baseline (filled in even when the template omits them):**
+
+   - `status: draft`
+   - `published: false`
+   - `created`, `updated` — today's date in `YYYY-MM-DD`.
+   - `excerpt` — ≤ 200 chars.
+   - `tags` — derived from topic keywords (only if the template declares `tags`; if the template has no `tags` field, do not add one).
+
+   For any other field (`type`, `channel`, `date`, `slug`, `category`, etc.), use **exactly what the template declares** — same key, same value shape. Do not override the template's `type` value with something else, and do not add a `type` field if the template doesn't have one.
+
+   Example shape (exact field set is whatever the channel template declares, plus the baseline above):
 
    ```yaml
    ---
-   type: newsletter
+   type: <whatever the channel template declares>
    channel: newsletter
    status: draft
    title: <title>
@@ -291,6 +321,7 @@ Batch in parallel where independent (browser vs WebFetch on disjoint URLs).
    ```
 
 3. **Write the body.** Non-negotiables:
+   - **Authorial, not referential.** Honor the "Authorial stance" section at the top of this skill. The piece is the author's argument — sources are evidence and contrast, never the spine. If the user provided `--sources`, if Step 7 surfaced archive candidates, or if Step 8 verified external citations, treat all of them as raw material the author thinks *with*, not material the author explains. Never write "in this article, X argues…", "the piece by Y walks through…", "to summarize Z's framework…" as structural moves. Synthesize, take a position, and link the source inline as evidence for the author's claim.
    - **Apply `style-rules.md` in full**, not just the forbidden list. The whole file is the writing contract: voice principles, sentence patterns, one-line punches, opening/closing patterns, preferred expressions, contrast/forbidden, channel overrides. Every block is binding.
    - Anti-patterns declared in `channel-templates/{channel}.md` are also banned.
    - Use the opening technique from the outline. Recalibrate against the `## Few-shot examples` section of `voice-fingerprint.md` before writing the first sentence if you drifted.

@@ -24,13 +24,14 @@ Default structure for single tweets and threads on X/Twitter.
 ## Frontmatter (internal)
 
 ```yaml
-title: <internal title>
+title: <title>
 slug: <slug>
 date: <YYYY-MM-DD>
+tags: []
 status: draft
-type: tweet | tweet-thread
+excerpt: <one-sentence max 180 chars summary>
+type: article
 channel: twitter
-thread_length: <int or null>
 ```
 
 ## Anti-patterns

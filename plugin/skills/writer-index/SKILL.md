@@ -1,50 +1,32 @@
 ---
 name: writer-index
-description: Create or update the plugin's article index file (`eis-article-index.json`) at the workspace root. Two source modes — (a) query an Obsidian `.base` file via the Obsidian CLI when the user has one, (b) scan the folder declared in `article_archive` and parse YAML frontmatter when they don't. After writing, auto-wires `article_archive.index_file.path` in `.local.md` if it was null. Output is always JSON. Use when the user says "atualiza o índice", "cria o índice de artigos", "update article index", "refresh the index", or runs `/writer-index`.
+description: Create or update the plugin's article index file (`eis-article-index.json`) at the workspace root. Two source modes — (a) query an Obsidian `.base` file via the Obsidian CLI when the user has one, (b) scan the folder declared in `article_archive` and parse YAML frontmatter when they don't. After writing, auto-wires `article_archive.index_file.path` in `.local.json` if it was null. Output is always JSON. Use when the user says "atualiza o índice", "cria o índice de artigos", "update article index", "refresh the index", or runs `/writer-index`.
 argument-hint: "[--base <vault-relative-path-to-base-file>] [--out <output-filename>]"
 allowed-tools: Read, Write, Edit, Bash, AskUserQuestion
 ---
 
 # SKILL
 
-> **Synopsis.** Builds `eis-article-index.json` at the workspace root. Source is Obsidian `.base` (if user has one and Obsidian CLI is on PATH) or a scan of `article_archive.path` parsing YAML frontmatter (fallback, no external dependencies). After writing, auto-wires `article_archive.index_file.path` in `.local.md` if empty, so `/writer-create` picks it up automatically. Never writes an empty index.
+> **Synopsis.** Builds `eis-article-index.json` at the workspace root. Source is Obsidian `.base` (if user has one and Obsidian CLI is on PATH) or a scan of `article_archive.path` parsing YAML frontmatter (fallback, no external dependencies). After writing, auto-wires `article_archive.index_file.path` in `.local.json` if empty, so `/writer-create` picks it up automatically. Never writes an empty index.
 
 
 # Writer Index
 
 Build or refresh **the plugin's own article index** at the root of the writer workspace. The output file is always `eis-article-index.json` (JSON, not JS — `.js` was a legacy convention that's been retired). Run this whenever you want a fresh snapshot — after saving new drafts, after bulk status changes, or on demand.
 
-This skill is the **builder**, not the consumer. `/writer-create` reads `article_archive.index_file.path` from `.local.md`; this skill writes that file and points the config at it.
+This skill is the **builder**, not the consumer. `/writer-create` reads `article_archive.index_file.path` from `.local.json`; this skill writes that file and points the config at it.
 
 ## Invariant rules
 
 - Never fabricate records. Every entry must come from the source (base query or YAML scan).
 - Never overwrite the index with an empty array. Zero records → stop and warn.
-- Read-only on the vault and on the archive folder. This skill only writes its own index file (and `.local.md`).
+- Read-only on the vault and on the archive folder. This skill only writes its own index file (and `.local.json`).
 
 ## Step 1 — Load workspace config
 
-Locate the plugin config by probing in order: (1) `${EIS_CONTENT_BUILDER_CONFIG}` if set, (2) `${cwd}/.claude/eis-content-builder.local.md`, (3) walk-up from `${cwd}`, (4) `${HOME}/.claude/eis-content-builder.local.md`. Single `Bash`:
+Locate the plugin config using the canonical probe in `../writer-setup/references/load-config.md` (pointer → env var → walk-up, all targeting `.local.json`). Empty → tell the user "Workspace não configurado. Rode `/writer-setup` primeiro." Stop. Otherwise `Read "$CONFIG_PATH"`, parse as JSON, and extract `workspace_path`, `article_archive.path`, `article_archive.toolchain`, `article_archive.file_pattern`, `article_archive.schema`, and any existing `article_archive.index_file`.
 
-```bash
-config=""
-if [ -n "$EIS_CONTENT_BUILDER_CONFIG" ] && [ -f "$EIS_CONTENT_BUILDER_CONFIG" ]; then
-  config="$EIS_CONTENT_BUILDER_CONFIG"
-fi
-if [ -z "$config" ]; then
-  dir="$PWD"
-  while [ "$dir" != "/" ]; do
-    [ -f "$dir/.claude/eis-content-builder.local.md" ] && config="$dir/.claude/eis-content-builder.local.md" && break
-    dir="$(dirname "$dir")"
-  done
-fi
-[ -z "$config" ] && [ -f "$HOME/.claude/eis-content-builder.local.md" ] && config="$HOME/.claude/eis-content-builder.local.md"
-echo "$config"
-```
-
-Empty → tell the user "Workspace não configurado. Rode `/writer-setup` primeiro." Stop. Otherwise `Read "$config"` and extract `workspace_path`, `article_archive.path`, `article_archive.toolchain`, `article_archive.file_pattern`, `article_archive.schema`, and any existing `article_archive.index_file`.
-
-If `article_archive.enabled` is false or `article_archive.path` is empty, stop with: "Sem `article_archive` configurado em `.local.md`. Rode `/writer-setup` (modo update) e escolha registrar a pasta de artigos antes."
+If `article_archive.enabled` is false or `article_archive.path` is empty, stop with: "Sem `article_archive` configurado em `.local.json`. Rode `/writer-setup` (modo update) e escolha registrar a pasta de artigos antes."
 
 ## Step 2 — Pick source mode
 
@@ -114,9 +96,9 @@ Output path: `{workspace_path}/eis-article-index.json`. If `--out <filename>` wa
 ]
 ```
 
-## Step 5 — Auto-wire `index_file` in `.local.md`
+## Step 5 — Auto-wire `index_file` in `.local.json`
 
-If `article_archive.index_file.path` is `null` (or pointed somewhere that no longer exists), `Edit` `.local.md` to set:
+If `article_archive.index_file.path` is `null` (or pointed somewhere that no longer exists), `Edit` `.local.json` to set:
 
 ```yaml
 index_file:
@@ -124,7 +106,7 @@ index_file:
   format: json
 ```
 
-If `index_file.path` was already set and points to a different file (e.g. a user-maintained `.base` or CSV), do **not** overwrite — print a note: "Você já tem `index_file.path` apontando para `{old path}`. Mantive como está. Se quiser usar o índice que acabei de gerar, edite `.local.md` manualmente ou rode `/writer-setup` em modo update."
+If `index_file.path` was already set and points to a different file (e.g. a user-maintained `.base` or CSV), do **not** overwrite — print a note: "Você já tem `index_file.path` apontando para `{old path}`. Mantive como está. Se quiser usar o índice que acabei de gerar, edite `.local.json` manualmente ou rode `/writer-setup` em modo update."
 
 ## Step 6 — Confirm
 

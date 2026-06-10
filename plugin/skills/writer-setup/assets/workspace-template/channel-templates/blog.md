@@ -29,7 +29,7 @@ slug: <slug>
 date: <YYYY-MM-DD>
 tags: []
 status: draft
-excerpt: <one-sentence summary>
+excerpt: <one-sentence max 180 chars summary>
 type: article
 channel: blog
 ```
