@@ -12,7 +12,7 @@ The plugin builds a **writer workspace** on your machine (you pick where it live
 |---|---|
 | `/writer-setup` | Build the workspace from scratch. Asks where it goes, collects samples and identity links, optionally registers a folder of your already-written articles (auto-detects YAML schema), runs deep voice analysis via the `voice-analyzer` agent, infers identity via `profile-inferencer`, extracts opinions via `opinion-extractor`. v0.6.0 is first-time only; update and repair land in a later version. |
 | `/writer-ideate` | Brainstorm topics (open mode) or discuss a specific topic (Socratic mode). Delegates web research to the `content-scout` agent. |
-| `/writer-create` | Write a piece in your voice. Loads style-rules, voice-fingerprint, author-profile, opinion-map, and the channel template for the requested channel. Consults your article archive for internal links / repetition checks / reusable snippets. Saves to `drafts/` with complete frontmatter. Triggers the style-validator hook automatically. |
+| `/writer-create` | Write a piece in your voice. Loads style-rules, voice-fingerprint, author-profile, opinion-map, and the channel template for the requested channel. Consults your article archive for internal links / repetition checks / reusable snippets. Saves to `drafts/` with complete frontmatter. |
 | `/writer-save` | Move a draft from `drafts/` to its final destination. Applies saved save-preferences (stored in the local config); records new ones on demand (`--remember`). |
 | `/writer-calibrate` | Refine voice rules from your corrections. Accepts a diff (plugin draft vs your rewrite) or free-text description. Updates `style-rules.md` (and re-runs `voice-analyzer` for full rescans when you ask explicitly). Flags position shifts for `/writer-opinion-mine`. |
 | `/writer-opinion-mine` | Map the author's opinions on the topics they write. Socratic interview in batches of 3–5 questions. Writes to `references/opinion-map.md` — loaded by `writer-ideate` and `writer-create` so the plugin knows where the author stands, where they're still calibrating, and what they refuse to opine on. |
@@ -35,12 +35,6 @@ The plugin builds a **writer workspace** on your machine (you pick where it live
 |---|---|
 | `scripts/detect-archive-schema.py` | Deterministic detector for the YAML frontmatter schema of an article archive. No external dependencies (stdlib only). Invoked by `/writer-setup` Step 2.2; falls back to the `archive-detector` agent if the script errors. |
 
-## Hooks
-
-| Hook | Trigger | Action |
-|---|---|---|
-| `style-validator` | PostToolUse on `Write` or `Edit` | Fast-exits immediately for non-draft writes. For drafts inside the workspace, validates against `style-rules.md` and `voice-fingerprint.md`. Emits a non-blocking alert — never modifies the file. |
-
 ---
 
 > **Note on invocation:** skills in this plugin are user-invocable — they show up as `/eis-content-builder:writer-setup`, `/eis-content-builder:writer-create`, etc. Throughout this README and the skill prompts, the shorthand `/writer-setup` is used for readability. Natural language works too ("set up my writing profile", "write a blog post about X") — the skills have trigger descriptions that catch those.
@@ -52,7 +46,7 @@ The plugin builds a **writer workspace** on your machine (you pick where it live
         ↓
 /writer-ideate         (optional — when you don't have a topic)
         ↓
-/writer-create topic   (writes to drafts/, validator runs automatically; materializes channel template lazily on first use of each channel)
+/writer-create topic   (writes to drafts/ with mandatory self-audit; materializes channel template lazily on first use of each channel)
         ↓
 /writer-save           (moves draft to its final location)
         ↓

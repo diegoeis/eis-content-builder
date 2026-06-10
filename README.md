@@ -31,12 +31,12 @@ Skills also respond to natural language ("write a post about X", "I'm out of ide
 
 `voice-analyzer` (voice fingerprint), `profile-inferencer` (identity from public links), `opinion-extractor` (explicit opinions in your texts), `content-scout` (web research for ideation), `draft-evaluator` (draft audit with surgical patches), `archive-detector` (LLM fallback for archive schema detection). They are invoked by the skills — never directly by the user.
 
-There is also a `style-validator` hook (PostToolUse) that validates drafts against the style rules in a non-blocking way, plus the deterministic script `scripts/detect-archive-schema.py`.
+There is also the deterministic script `scripts/detect-archive-schema.py`, used by `/writer-setup` to detect the YAML schema of your article archive.
 
 ## Repository structure
 
 ```
-plugin/          ← the plugin itself (skills, agents, hooks, scripts) + full technical README
+plugin/          ← the plugin itself (skills, agents, scripts) + full technical README
 docs/            ← plugin PRD
 ```
 

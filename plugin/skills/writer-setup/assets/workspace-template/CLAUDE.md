@@ -114,7 +114,7 @@ running `/writer-setup` in repair mode.
 ## Opinion-map degrade protocol
 
 `references/opinion-map.md` is read by `writer-ideate`, `writer-create`,
-`writer-calibrate`, and the `style-validator` hook. When it is missing,
+and `writer-calibrate`. When it is missing,
 empty, or unparseable, every consuming skill MUST follow this single
 protocol — do not invent local fallbacks.
 

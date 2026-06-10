@@ -82,7 +82,7 @@ The baseline list is loaded from a sibling file based on
 
 These patterns read as generic LLM output, coach-speak, or empty
 corporate framing in the target language. Skills that consume voice
-(`/writer-create`, `/writer-calibrate`, `style-validator` hook) load the
+(`/writer-create`, `/writer-calibrate`) load the
 correct baseline file together with this one.
 
 ### Forbidden by contrast (detected from corpus)

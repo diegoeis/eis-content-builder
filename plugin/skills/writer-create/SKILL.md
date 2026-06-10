@@ -342,7 +342,7 @@ Batch in parallel where independent (browser vs WebFetch on disjoint URLs).
    - [{source title}]({url}) — {one sentence on why it's relevant}
    ```
 
-5. **Write the file.** Single `Write` call. The `style-validator` PostToolUse hook runs automatically.
+5. **Write the file.** Single `Write` call.
 
 ## Step 9.5 — Mandatory inline self-audit
 
@@ -459,8 +459,6 @@ Auto-fix loop:
    - Verdict becomes `block` → done with warnings logged.
    - Iteration 3 still needs_revision → done with warnings logged ("3 iterations exhausted, {n} violations remain").
    - `Non-improvement detected: yes` → done with warnings logged ("eval-loop made no progress, stopped early").
-
-5. **Hook alert handling.** If a `<style-validator-alert>` block appears in your context after any Edit/Write inside the loop, treat its violations as additional inputs to the next evaluator iteration (pass them as part of `previous_violations`). The hook is best-effort — the evaluator is authoritative.
 
 ### Verbose mode (`--eval verbose`)
 
